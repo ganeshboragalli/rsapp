@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Plant Monitoring</title>
+  <script src="https://cdn.jsdelivr.net/npm/progressbar.js@1.1.0/dist/progressbar.min.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      padding: 0 8px;
+    }
+
+    .back-button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .icons {
+      display: flex;
+      gap: 16px;
+    }
+
+    .icon-button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .settings-button {
+      background: #00875A;
+      border-radius: 8px;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .gauge-wrapper {
+      position: relative;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .gauge-label {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .gauge {
+      width: 140px;
+      height: 70px;
+      position: relative;
+    }
+
+    .gauge-value {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -20%);
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .gauge-scale {
+      display: flex;
+      justify-content: space-between;
+      width: 140px;
+      margin-top: 4px;
+      padding: 0 8px;
+    }
+
+    .gauge-scale span {
+      color: #666;
+      font-size: 12px;
+    }
+
+    .pump-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pump-button {
+      background: none;
+      border: 1px solid #00BFFF;
+      color: #00BFFF;
+      padding: 8px 32px;
+      border-radius: 24px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 16px;
+    }
+
+    .pump-button.active {
+      background: #00BFFF;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-button">←</button>
+    <h1 class="title">Smart Plant</h1>
+    <div class="icons">
+      <button class="icon-button settings-button">⚙</button>
+      <button class="icon-button">🔔</button>
+    </div>
+  </div>
+
+  <div class="grid-container">
+    <div class="gauge-wrapper">
+      <div class="gauge-label">temperature</div>
+      <div class="gauge">
+        <div id="temp-bar"></div>
+        <div class="gauge-value" id="temp-val" style="color: #FF4500">0</div>
+      </div>
+      <div class="gauge-scale">
+        <span>0</span>
+        <span>100</span>
+      </div>
+    </div>
+
+    <div class="gauge-wrapper">
+      <div class="gauge-label">humidity</div>
+      <div class="gauge">
+        <div id="hum-bar"></div>
+        <div class="gauge-value" id="hum-val" style="color: #1E90FF">0</div>
+      </div>
+      <div class="gauge-scale">
+        <span>0</span>
+        <span>100</span>
+      </div>
+    </div>
+
+    <div class="gauge-wrapper">
+      <div class="gauge-label">soil</div>
+      <div class="gauge">
+        <div id="soil-bar"></div>
+        <div class="gauge-value" id="soil-val" style="color: #00FF7F">0</div>
+      </div>
+      <div class="gauge-scale">
+        <span>0</span>
+        <span>100</span>
+      </div>
+    </div>
+
+    <div class="gauge-wrapper pump-container">
+      <div class="gauge-label">Water pump</div>
+      <button id="pump-btn" class="pump-button" onclick="togglePump()">OFF</button>
+    </div>
+  </div>
+
+  <script>
+    const blynkToken = 'YOUR_BLYNK_TOKEN';
+
+    // Initialize progress bars with matching colors from the reference
+    const tempBar = new ProgressBar.SemiCircle('#temp-bar', {
+      strokeWidth: 12,
+      color: '#FF4500',
+      trailColor: '#2A2A2A',
+      trailWidth: 12,
+      easing: 'easeInOut',
+      duration: 1400,
+      svgStyle: null,
+      text: {
+        autoStyleContainer: false
+      },
+      step: (state, bar) => {
+        bar.path.setAttribute('stroke-linecap', 'round');
+      }
+    });
+
+    const humBar = new ProgressBar.SemiCircle('#hum-bar', {
+      strokeWidth: 12,
+      color: '#1E90FF',
+      trailColor: '#2A2A2A',
+      trailWidth: 12,
+      easing: 'easeInOut',
+      duration: 1400,
+      svgStyle: null,
+      text: {
+        autoStyleContainer: false
+      },
+      step: (state, bar) => {
+        bar.path.setAttribute('stroke-linecap', 'round');
+      }
+    });
+
+    const soilBar = new ProgressBar.SemiCircle('#soil-bar', {
+      strokeWidth: 12,
+      color: '#00FF7F',
+      trailColor: '#2A2A2A',
+      trailWidth: 12,
+      easing: 'easeInOut',
+      duration: 1400,
+      svgStyle: null,
+      text: {
+        autoStyleContainer: false
+      },
+      step: (state, bar) => {
+        bar.path.setAttribute('stroke-linecap', 'round');
+      }
+    });
+
+    function fetchData() {
+      // Fetch Temperature
+      fetch(`https://blynk.cloud/external/api/get?token=zh-JtDT1lUsTzInTwXqf3bsfuI67w3yS&v0`)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('temp-val').textContent = data;
+          tempBar.animate(data / 100);
+        });
+
+      // Fetch Humidity
+      fetch(`https://blynk.cloud/external/api/get?token=zh-JtDT1lUsTzInTwXqf3bsfuI67w3yS&v1`)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('hum-val').textContent = data;
+          humBar.animate(data / 100);
+        });
+
+      // Fetch Soil Moisture
+      fetch(`https://blynk.cloud/external/api/get?token=zh-JtDT1lUsTzInTwXqf3bsfuI67w3yS&v3`)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('soil-val').textContent = data;
+          soilBar.animate(data / 100);
+        });
+    }
+
+    let pumpState = false;
+    function togglePump() {
+      pumpState = !pumpState;
+      const btn = document.getElementById('pump-btn');
+      btn.textContent = pumpState ? 'ON' : 'OFF';
+      btn.classList.toggle('active', pumpState);
+      
+fetch(`https://blynk.cloud/external/api/update?token=zh-JtDT1lUsTzInTwXqf3bsfuI67w3yS&V12=${pumpState ? 1 : 0}`)
+        .catch(error => console.error('Error toggling pump:', error));
+    }
+
+    // Initial fetch and set interval
+    fetchData();
+    setInterval(fetchData, 5000);
+  </script>
+</body>
+</html>
